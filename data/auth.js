@@ -13,6 +13,8 @@ export function findByUsername(username) {
   return users.find((user) => username === user.username);
 }
 
-export function createUser(user) {
-  users.push(user);
+export async function createUser(user) {
+  const created = { ...user, id: Date.now().toString() };
+  users.push(created);
+  return created.id;
 }

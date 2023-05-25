@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as userRepository from "../data/auth.js";
 
-function signup(req, res) {
+export async function signup(req, res) {
   const { password, username, name, email, url } = req.body;
   const found = userRepository.findByUsername(username);
 
@@ -10,7 +10,45 @@ function signup(req, res) {
     return res.status(409).json({ message: `${username} is already exist` });
   }
 
-  userRepository.createUser({ password, username, name, email, url });
+  const hashed = await bcrypt.hash(password, 12);
+
+  const userId = await userRepository.createUser({
+    password: hashed,
+    username,
+    name,
+    email,
+    url,
+  });
+
+  const token = createJwtToken(userId);
+
+  res.status(201).json({ token, username });
+}
+
+export async function login(req, res) {
+  const { username, password } = req.body;
+  const user = userRepository.findByUsername(username);
+
+  if (!user) {
+    return res.status(401).json({ message: "Can't find your information" });
+  }
+  //계정이 있는지 확인
+
+  const isValidPassword = bcrypt.compare(password, user.password);
+
+  if (!isValidPassword) {
+    return res.status(401).json({ message: "Invalid user" });
+  }
+
+  const token = createJwtToken(user.id);
+
+  res.status(200).json({ token, username });
+}
+
+const secretKey = "fM5kL1g%Pt7ccS8ghhLug#BD8XrrxrVs";
+
+function createJwtToken(id) {
+  return jwt.sign({ id }, secretKey, { expiresIn: 17200 });
 }
 
 //id, password, username, name, email, url이 rep가 될 것이다.
